@@ -1,0 +1,116 @@
+{% load static rbac %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}企业员工管理系统{% endblock %} - HRMS</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/hrms.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="{% url 'index' %}">HR<span>MS</span> 企业员工管理系统</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                    <span class="glyphicon glyphicon-user"></span>
+                    {{ request.user.username }}
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li class="dropdown-header">角色：{{ request.user.role_names }}</li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="{% url 'logout' %}"><span class="glyphicon glyphicon-log-out"></span> 退出登录</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+            {% with url_name=request.resolver_match.url_name %}
+            <ul class="nav nav-sidebar">
+                <li class="{% if url_name == 'index' %}active{% endif %}">
+                    <a href="{% url 'index' %}"><span class="glyphicon glyphicon-home"></span> 首页看板</a>
+                </li>
+                {% if request.user|has_perm:"department_view" %}
+                <li class="{% if 'department' in url_name %}active{% endif %}">
+                    <a href="{% url 'department_list' %}"><span class="glyphicon glyphicon-th-large"></span> 部门管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"employee_view" %}
+                <li class="{% if 'employee' in url_name %}active{% endif %}">
+                    <a href="{% url 'employee_list' %}"><span class="glyphicon glyphicon-user"></span> 员工管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"attendance_view" %}
+                <li class="{% if 'attendance' in url_name %}active{% endif %}">
+                    <a href="{% url 'attendance_list' %}"><span class="glyphicon glyphicon-calendar"></span> 考勤管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"salary_view" %}
+                <li class="{% if 'salary' in url_name %}active{% endif %}">
+                    <a href="{% url 'salary_list' %}"><span class="glyphicon glyphicon-briefcase"></span> 薪资管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"notice_view" %}
+                <li class="{% if 'notice' in url_name %}active{% endif %}">
+                    <a href="{% url 'notice_list' %}"><span class="glyphicon glyphicon-bell"></span> 公告管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"task_view" %}
+                <li class="{% if 'task' in url_name %}active{% endif %}">
+                    <a href="{% url 'task_list' %}"><span class="glyphicon glyphicon-check"></span> 任务管理</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"stats_view" %}
+                <li class="{% if 'stats' in url_name %}active{% endif %}">
+                    <a href="{% url 'stats_index' %}"><span class="glyphicon glyphicon-signal"></span> 数据统计</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"ai_view" %}
+                <li class="{% if url_name == 'ai_index' %}active{% endif %}">
+                    <a href="{% url 'ai_index' %}"><span class="glyphicon glyphicon-comment"></span> AI 助手</a>
+                </li>
+                {% endif %}
+                {% if request.user|has_perm:"system_manage" %}
+                <li class="{% if 'system' in url_name %}active{% endif %}">
+                    <a href="{% url 'system_user_list' %}"><span class="glyphicon glyphicon-cog"></span> 系统管理</a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endwith %}
+            <div class="sidebar-footer">
+                <div>当前角色：{{ request.user.role_names }}</div>
+                <div>数据范围：{% if request.user.is_superuser %}全部数据{% elif request.user.depart %}{{ request.user.depart.name }}{% else %}仅本人{% endif %}</div>
+            </div>
+        </div>
+
+        <div class="col-sm-9 col-md-10 main">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert {{ message.tags }} alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="关闭"><span aria-hidden="true">&times;</span></button>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/bootstrap/js/bootstrap.min.js' %}"></script>
+{% block extra_js %}{% endblock %}
+{# 全站智能体浮窗：登录且拥有 ai_view 权限的用户可见 #}
+{% include 'ai/widget.html' %}
+</body>
+</html>

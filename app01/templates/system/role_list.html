@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}角色权限{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>角色管理</h1>
+    <div class="actions">
+        <a href="{% url 'system_user_list' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-user"></span> 用户管理
+        </a>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th width="60">ID</th>
+                <th width="160">角色名称</th>
+                <th width="220">描述</th>
+                <th>拥有权限</th>
+                <th width="130">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for role in roles %}
+            <tr>
+                <td>{{ role.id }}</td>
+                <td><strong>{{ role.name }}</strong></td>
+                <td class="text-muted">{{ role.desc|default:"—" }}</td>
+                <td>
+                    {% for permission in role.permissions.all %}
+                    <span class="label label-default">{{ permission.name }}</span>
+                    {% empty %}<span class="text-muted">暂无权限</span>{% endfor %}
+                </td>
+                <td>
+                    <a href="{% url 'system_role_permissions' role.pk %}" class="btn btn-xs btn-default">
+                        <span class="glyphicon glyphicon-lock"></span> 配置权限
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted empty-hint">暂无角色</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

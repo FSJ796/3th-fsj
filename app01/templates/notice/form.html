@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ title }}</h1>
+    <div class="actions">
+        <a href="{% url 'notice_list' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-arrow-left"></span> 返回列表
+        </a>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        <form method="post" class="form-horizontal" style="max-width: 760px;">
+            {% csrf_token %}
+            {% include 'partials/form_fields.html' with form=form %}
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="submit" class="btn btn-primary">发布</button>
+                    <a href="{% url 'notice_list' %}" class="btn btn-default">取消</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

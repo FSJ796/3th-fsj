@@ -1,0 +1,119 @@
+{% load rbac %}
+{% if request.user.is_authenticated and request.user|has_perm:"ai_view" %}
+<!-- 全站智能体浮窗：右下角圆形入口 + 聊天面板，复用 /ai/chat/ 知识库问答接口 -->
+<style>
+    #ai-launcher {
+        position: fixed; right: 24px; bottom: 24px; z-index: 1050;
+        width: 52px; height: 52px; border-radius: 50%; border: none;
+        background: #4f7cff; color: #fff; font-size: 22px;
+        box-shadow: 0 6px 18px rgba(79, 124, 255, .4); cursor: pointer;
+    }
+    #ai-launcher:hover { background: #3d68e8; }
+    #ai-panel {
+        position: fixed; right: 24px; bottom: 88px; z-index: 1050;
+        width: 340px; max-width: calc(100vw - 32px); display: none;
+        background: #fff; border: 1px solid #e3e8ef; border-radius: 10px;
+        box-shadow: 0 12px 32px rgba(31, 45, 61, .18); overflow: hidden;
+    }
+    .ai-panel-header {
+        padding: 10px 12px; background: #4f7cff; color: #fff;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .ai-panel-header a { color: #eaf0ff; font-size: 12px; }
+    .ai-panel-close { background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; }
+    #ai-messages { height: 300px; overflow-y: auto; padding: 12px; background: #f6f8fc; }
+    .ai-msg { margin-bottom: 10px; display: flex; }
+    .ai-msg .bubble {
+        max-width: 82%; padding: 8px 11px; border-radius: 10px;
+        font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    }
+    .ai-msg.bot .bubble { background: #fff; border: 1px solid #e3e8ef; color: #333; }
+    .ai-msg.user { justify-content: flex-end; }
+    .ai-msg.user .bubble { background: #4f7cff; color: #fff; }
+    .ai-msg .sources { display: block; margin-top: 4px; font-size: 11px; color: #8a94a6; }
+    .ai-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #edf0f5; }
+    .ai-input-row input { flex: 1; }
+</style>
+
+<button id="ai-launcher" type="button" title="智能助手"><span class="glyphicon glyphicon-comment"></span></button>
+
+<div id="ai-panel">
+    <div class="ai-panel-header">
+        <span><span class="glyphicon glyphicon-comment"></span> 智能助手</span>
+        <span>
+            <a href="{% url 'ai_index' %}" title="打开完整 AI 助手">更多功能</a>
+            <button type="button" class="ai-panel-close" id="ai-close" title="收起">&times;</button>
+        </span>
+    </div>
+    <div id="ai-messages"></div>
+    <div class="ai-input-row">
+        <input type="text" id="ai-input" class="form-control input-sm" maxlength="200"
+               placeholder="问我考勤、请假、报销等制度问题">
+        <button type="button" class="btn btn-primary btn-sm" id="ai-send">发送</button>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        var $panel = $('#ai-panel');
+        var $messages = $('#ai-messages');
+        var $input = $('#ai-input');
+
+        // 追加一条聊天气泡；sources 为可选的参考资料标题列表
+        function appendMsg(text, role, sources) {
+            var $msg = $('<div class="ai-msg"></div>').addClass(role);
+            var $bubble = $('<div class="bubble"></div>').text(text);
+            if (sources && sources.length) {
+                $bubble.append($('<span class="sources"></span>').text('参考资料：' + sources.join('、')));
+            }
+            $msg.append($bubble);
+            $messages.append($msg);
+            $messages.scrollTop($messages.prop('scrollHeight'));
+            return $bubble;
+        }
+
+        $('#ai-launcher').click(function () {
+            $panel.toggle();
+            if ($panel.is(':visible') && !$messages.children().length) {
+                appendMsg('您好，我是企业智能助手，可以问我考勤、请假、报销、薪资发放等制度问题。', 'bot');
+            }
+            if ($panel.is(':visible')) { $input.focus(); }
+        });
+        $('#ai-close').click(function () { $panel.hide(); });
+
+        var sending = false;
+        function send() {
+            var question = $.trim($input.val());
+            if (!question || sending) { return; }
+            sending = true;
+            $('#ai-send').prop('disabled', true);
+            appendMsg(question, 'user');
+            $input.val('');
+            var $loading = appendMsg('正在思考…', 'bot');
+            $.ajax({
+                url: '{% url "ai_chat" %}', type: 'post', dataType: 'json',
+                data: {question: question},
+                success: function (res) {
+                    if (res.status) {
+                        $loading.text(res.data);
+                        if (res.sources && res.sources.length) {
+                            $loading.append($('<span class="sources"></span>').text('参考资料：' + res.sources.join('、')));
+                        }
+                    } else {
+                        $loading.text(res.error || '暂时无法回答，请稍后再试');
+                    }
+                },
+                error: function () { $loading.text('网络异常，请稍后重试'); },
+                complete: function () {
+                    sending = false;
+                    $('#ai-send').prop('disabled', false);
+                    $messages.scrollTop($messages.prop('scrollHeight'));
+                    $input.focus();
+                }
+            });
+        }
+        $('#ai-send').click(send);
+        $input.on('keydown', function (e) { if (e.keyCode === 13) { send(); } });
+    });
+</script>
+{% endif %}

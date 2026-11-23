@@ -1,0 +1,33 @@
+{% load rbac %}
+{% if page.has_other_pages %}
+<nav class="text-right">
+    <ul class="pagination pagination-sm">
+        <li class="{% if not page.has_previous %}disabled{% endif %}">
+            {% if page.has_previous %}
+            <a href="?{% query_replace page=page.previous_page_number %}" aria-label="上一页">&laquo;</a>
+            {% else %}
+            <span>&laquo;</span>
+            {% endif %}
+        </li>
+        {% for num in page.paginator.page_range %}
+        <li class="{% if num == page.number %}active{% endif %}">
+            {% if num == page.number %}
+            <span>{{ num }}</span>
+            {% else %}
+            <a href="?{% query_replace page=num %}">{{ num }}</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+        <li class="{% if not page.has_next %}disabled{% endif %}">
+            {% if page.has_next %}
+            <a href="?{% query_replace page=page.next_page_number %}" aria-label="下一页">&raquo;</a>
+            {% else %}
+            <span>&raquo;</span>
+            {% endif %}
+        </li>
+    </ul>
+    <span class="pagination-info">共 {{ page.paginator.count }} 条，第 {{ page.number }}/{{ page.paginator.num_pages }} 页</span>
+</nav>
+{% else %}
+<div class="text-right pagination-info">共 {{ page.paginator.count }} 条</div>
+{% endif %}

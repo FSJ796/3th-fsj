@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load rbac %}
+{% block title %}员工管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>员工管理</h1>
+    {% if request.user|has_perm:"employee_add" %}
+    <div class="actions">
+        <a href="{% url 'employee_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus"></span> 新增员工
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        <form class="form-inline" method="get">
+            <div class="form-group">
+                <input type="text" name="q" value="{{ keyword }}" class="form-control" placeholder="按姓名模糊搜索">
+            </div>
+            <div class="form-group">
+                <select name="depart" class="form-control">
+                    <option value="">全部部门</option>
+                    {% for department in departments %}
+                    <option value="{{ department.pk }}" {% if depart_id == department.pk|stringformat:"s" %}selected{% endif %}>{{ department.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> 查询</button>
+            {% if keyword or depart_id %}<a href="{% url 'employee_list' %}" class="btn btn-link">清空筛选</a>{% endif %}
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-striped employee-table">
+            <thead>
+            <tr>
+                <th width="56">ID</th>
+                <th width="64">头像</th>
+                <th>姓名</th>
+                <th width="60">性别</th>
+                <th width="60">年龄</th>
+                <th width="130">手机号</th>
+                <th>所属部门</th>
+                <th width="120">入职时间</th>
+                <th width="120">账户余额</th>
+                <th width="160">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for employee in page %}
+            <tr>
+                <td>{{ employee.id }}</td>
+                <td>
+                    {% if employee.avatar %}
+                    <img src="{{ employee.avatar.url }}" class="avatar" alt="{{ employee.name }}">
+                    {% else %}
+                    <span class="avatar-text">{{ employee.name|slice:":1" }}</span>
+                    {% endif %}
+                </td>
+                <td><strong>{{ employee.name }}</strong></td>
+                <td>{{ employee.gender }}</td>
+                <td>{{ employee.age }}</td>
+                <td>{{ employee.phone }}</td>
+                <td><span class="label label-info">{{ employee.depart.name }}</span></td>
+                <td>{{ employee.create_time|date:"Y-m-d" }}</td>
+                <td>￥{{ employee.account|floatformat:2 }}</td>
+                <td>
+                    {% if request.user|has_perm:"employee_edit" %}
+                    <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-xs btn-default">
+                        <span class="glyphicon glyphicon-pencil"></span> 编辑
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_perm:"employee_delete" %}
+                    <form method="post" action="{% url 'employee_delete' employee.pk %}" class="inline-form"
+                          onsubmit="return confirm('确定删除员工「{{ employee.name }}」吗？其考勤与薪资记录将一并删除。');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger">
+                            <span class="glyphicon glyphicon-trash"></span> 删除
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="10" class="text-center text-muted empty-hint">暂无员工数据</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel-footer">
+        {% include 'partials/pagination.html' with page=page %}
+    </div>
+</div>
+{% endblock %}

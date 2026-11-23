@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}首页看板{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>首页看板</h1>
+    <div class="actions text-muted small">当前统计月份：{{ current_month }}</div>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="stat-card">
+            <span class="glyphicon glyphicon-th-large"></span>
+            <div class="label">部门数量</div>
+            <div class="value">{{ department_count }}</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="stat-card">
+            <span class="glyphicon glyphicon-user"></span>
+            <div class="label">员工数量</div>
+            <div class="value">{{ employee_count }}</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="stat-card">
+            <span class="glyphicon glyphicon-briefcase"></span>
+            <div class="label">本月薪资总额</div>
+            <div class="value stat-money">￥{{ salary_total|floatformat:2 }}</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="stat-card">
+            <span class="glyphicon glyphicon-calendar"></span>
+            <div class="label">今日出勤人数</div>
+            <div class="value">{{ attendance_today }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">最新公告</div>
+            <div class="panel-body notice-preview">
+                {% for notice in recent_notices %}
+                <div class="notice-item">
+                    <div class="notice-title">
+                        {% if notice.is_top %}<span class="label label-danger">置顶</span>{% endif %}
+                        {{ notice.title }}
+                        <span class="notice-time">{{ notice.create_time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="notice-text">{{ notice.content|truncatechars:90 }}</div>
+                </div>
+                {% empty %}
+                <div class="text-muted text-center empty-hint">暂无公告</div>
+                {% endfor %}
+            </div>
+            <div class="panel-footer text-right">
+                <a href="{% url 'notice_list' %}">查看全部公告 &raquo;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">快捷入口</div>
+            <div class="panel-body quick-links">
+                {% if request.user.is_superuser or request.user.depart %}
+                <a href="{% url 'employee_list' %}" class="quick-link"><span class="glyphicon glyphicon-user"></span> 员工档案</a>
+                {% endif %}
+                <a href="{% url 'attendance_list' %}" class="quick-link"><span class="glyphicon glyphicon-calendar"></span> 考勤记录</a>
+                <a href="{% url 'salary_list' %}" class="quick-link"><span class="glyphicon glyphicon-briefcase"></span> 薪资明细</a>
+                <a href="{% url 'notice_list' %}" class="quick-link"><span class="glyphicon glyphicon-bell"></span> 公告中心</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}配置角色权限{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>配置角色权限 <small>{{ role.name }}</small></h1>
+    <div class="actions">
+        <a href="{% url 'system_role_list' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-arrow-left"></span> 返回角色列表
+        </a>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        <form method="post">
+            {% csrf_token %}
+            {% for module, permissions in modules.items %}
+            <div class="perm-group">
+                <h4>{{ module }}</h4>
+                <div class="row">
+                    {% for permission in permissions %}
+                    <div class="col-sm-6 col-md-4">
+                        <label class="perm-option">
+                            <input type="checkbox" name="permissions" value="{{ permission.pk }}"
+                                   {% if permission.pk in selected_ids %}checked{% endif %}>
+                            {{ permission.name }}
+                            <span class="text-muted small">{{ permission.code }}</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <hr>
+            <button type="submit" class="btn btn-primary">保存权限</button>
+            <a href="{% url 'system_role_list' %}" class="btn btn-default">取消</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

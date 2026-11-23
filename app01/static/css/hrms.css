@@ -1,0 +1,262 @@
+/* 企业员工管理系统自定义样式（Bootstrap 3.4.1 基础上扩展） */
+body {
+    padding-top: 50px;
+    background: #f4f6fa;
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    color: #3d4653;
+}
+
+a { color: #337ab7; }
+
+.navbar-inverse { background: #23314a; border-color: #1c2739; }
+.navbar-inverse .navbar-brand { color: #fff; font-weight: 600; letter-spacing: .5px; }
+.navbar-inverse .navbar-brand span { color: #5bc0de; }
+.navbar-inverse .navbar-nav > li > a { color: #c6d2e2; }
+.navbar-inverse .navbar-nav > li > a:hover { color: #fff; background: #1b273b; }
+.navbar-inverse .navbar-nav > .open > a,
+.navbar-inverse .navbar-nav > .open > a:hover,
+.navbar-inverse .navbar-nav > .open > a:focus { background: #1b273b; color: #fff; }
+.dropdown-header { color: #7b8ba3; }
+
+/* 侧边栏 */
+.sidebar {
+    background: #fff;
+    border-right: 1px solid #e5e9f1;
+    padding: 0;
+    min-height: calc(100vh - 50px);
+}
+.sidebar .nav-sidebar { margin: 12px 0 0; }
+.sidebar .nav-sidebar > li > a {
+    color: #515c6b;
+    padding: 12px 20px;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+}
+.sidebar .nav-sidebar > li > a:hover { background: #f4f8ff; color: #337ab7; }
+.sidebar .nav-sidebar > li.active > a {
+    background: #eef4ff;
+    color: #2f6fb2;
+    border-left-color: #337ab7;
+    font-weight: 600;
+}
+.sidebar .nav-sidebar .glyphicon { margin-right: 9px; opacity: .75; }
+.sidebar-footer {
+    margin-top: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid #eef1f6;
+    color: #98a2b3;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.main { padding: 20px 24px 50px; }
+
+.page-header {
+    margin: 0 0 22px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e9f2;
+}
+.page-header h1 { font-size: 22px; font-weight: 600; margin: 0; }
+.page-header h1 small { color: #9aa5b1; font-size: 13px; font-weight: normal; }
+.page-header .actions { float: right; margin-top: -6px; }
+
+.panel { border-color: #e6ebf2; box-shadow: 0 1px 3px rgba(16, 24, 40, .04); border-radius: 4px; }
+.panel-heading {
+    background: #fbfcfe;
+    border-color: #e6ebf2;
+    color: #3d4653;
+    font-weight: 600;
+}
+.panel-title { font-weight: 600; }
+.panel-footer { background: #fbfcfe; border-color: #e6ebf2; }
+
+.table { margin-bottom: 0; }
+.table > thead > tr > th {
+    background: #f8fafc;
+    color: #5b6472;
+    font-weight: 600;
+    border-bottom: 1px solid #e6ebf2;
+    white-space: nowrap;
+}
+.table-hover > tbody > tr:hover { background: #f6f9ff; }
+.table > tbody > tr > td { vertical-align: middle; }
+
+.pagination { margin: 0 0 0 0; }
+.pagination-info { color: #9aa5b1; font-size: 12px; line-height: 30px; }
+
+.empty-hint { padding: 26px 0 !important; }
+
+.inline-form { display: inline; }
+
+/* 首页看板 */
+.stat-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e6ebf2;
+    border-radius: 5px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .05);
+    overflow: hidden;
+}
+.stat-card > .glyphicon {
+    position: absolute;
+    right: 16px;
+    top: 18px;
+    font-size: 34px;
+    color: #dbe6f3;
+}
+.stat-card .label { display: block; color: #8a94a6; font-size: 13px; font-weight: normal; padding: 0; text-align: left; }
+.stat-card .value { margin-top: 6px; font-size: 26px; font-weight: 700; color: #2d3748; }
+.stat-card .stat-money { font-size: 22px; color: #2f6fb2; }
+
+.notice-preview { padding: 0 15px; }
+.notice-item { padding: 12px 0; border-bottom: 1px dashed #edf0f5; }
+.notice-item:last-child { border-bottom: none; }
+.notice-title { font-weight: 600; color: #3d4653; }
+.notice-time { float: right; font-weight: normal; color: #9aa5b1; font-size: 12px; }
+.notice-text { color: #7b8594; font-size: 13px; margin-top: 4px; }
+
+.quick-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.quick-link {
+    display: inline-block;
+    padding: 12px 16px;
+    background: #f6f9fe;
+    border: 1px solid #e4ecf8;
+    border-radius: 4px;
+    color: #3d6fa3;
+    font-size: 13px;
+    margin: 0 8px 10px 0;
+}
+.quick-link:hover { background: #eaf2ff; text-decoration: none; color: #2f6fb2; }
+.quick-link .glyphicon { margin-right: 5px; }
+
+/* 头像 */
+.avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; }
+.avatar-text {
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    line-height: 32px;
+    text-align: center;
+    border-radius: 50%;
+    background: #e8f0fe;
+    color: #337ab7;
+    font-weight: 600;
+    border: 1px solid #d6e4f9;
+}
+.avatar-lg { width: 76px; height: 76px; border-radius: 8px; }
+
+/* 薪资 */
+.summary-card {
+    background: linear-gradient(135deg, #337ab7, #245c8c);
+    color: #fff;
+    border-radius: 5px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 6px rgba(47, 111, 178, .25);
+}
+.summary-card .label { display: block; font-size: 13px; font-weight: normal; opacity: .85; padding: 0; text-align: left; }
+.summary-card .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+.summary-card .hint { font-size: 12px; opacity: .75; margin-top: 4px; }
+.salary-total { color: #2f6fb2; }
+
+/* 公告 */
+.notice-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.notice-title-text { font-size: 15px; }
+.notice-meta { color: #9aa5b1; font-size: 12px; font-weight: normal; white-space: nowrap; }
+.notice-content { color: #5b6472; line-height: 1.9; font-size: 14px; }
+.notice-top { border-color: #f3c8c8; }
+
+/* 任务 */
+.task-detail { max-width: 360px; color: #6b7686; }
+.task-detail { word-break: break-all; }
+.form-group .field-error { min-height: 0; margin-bottom: 0; }
+.form-group[data-field] > .control-label { font-weight: 600; font-size: 13px; color: #5b6472; }
+.required-mark { color: #d9534f; margin-left: 2px; }
+
+/* 表单 */
+.form-horizontal .control-label { text-align: left; font-weight: 600; color: #5b6472; }
+.form-control:focus { border-color: #6ea8de; box-shadow: 0 0 0 3px rgba(51, 122, 183, .12); }
+
+/* 统计图 */
+.chart-box { width: 100%; height: 370px; }
+
+/* 系统管理 */
+.role-option { padding: 6px 0; }
+.role-option label { font-weight: normal; cursor: pointer; }
+.perm-group { margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px dashed #edf0f5; }
+.perm-group h4 { font-size: 14px; font-weight: 600; color: #2f6fb2; margin-bottom: 12px; }
+.perm-option { font-weight: normal; cursor: pointer; display: block; padding: 4px 0; }
+.perm-option .small { margin-left: 6px; }
+
+/* 403 */
+.forbidden-panel { margin-top: 40px; }
+.forbidden-panel .forbidden-code { font-size: 60px; font-weight: 700; color: #d6dee9; line-height: 1; }
+.forbidden-panel h3 { margin-top: 12px; font-size: 20px; }
+
+/* 登录页 */
+.login-body {
+    padding-top: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #23314a 0%, #2f5d8f 55%, #3c8dbc 100%);
+}
+.login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 15px;
+}
+.login-card {
+    width: 400px;
+    max-width: 100%;
+    background: #fff;
+    border-radius: 8px;
+    padding: 34px 34px 22px;
+    box-shadow: 0 18px 50px rgba(8, 20, 40, .35);
+}
+.login-brand { text-align: center; margin-bottom: 24px; }
+.login-brand .logo {
+    display: inline-block;
+    width: 54px;
+    height: 54px;
+    line-height: 54px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #337ab7, #5bc0de);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+.login-brand h1 { font-size: 20px; font-weight: 600; margin: 6px 0 4px; color: #23314a; }
+.login-brand p { color: #9aa5b1; font-size: 12px; margin: 0; letter-spacing: .5px; }
+.login-card .alert { font-size: 13px; padding: 10px 14px; }
+.login-btn { height: 42px; font-size: 15px; letter-spacing: 2px; margin-top: 6px; }
+.captcha-row { display: flex; gap: 10px; }
+.captcha-row input { flex: 1; }
+.captcha-row img {
+    height: 34px;
+    width: 108px;
+    border: 1px solid #d3dbe6;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.captcha-tip { margin-top: 4px; font-size: 12px; }
+.login-footer {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid #eef1f6;
+    color: #98a2b3;
+    font-size: 12px;
+    line-height: 1.9;
+    text-align: center;
+}
+
+@media (max-width: 767px) {
+    .sidebar { min-height: auto; }
+    .main { padding: 16px; }
+    .page-header .actions { float: none; margin-top: 10px; }
+    .chart-box { height: 300px; }
+}

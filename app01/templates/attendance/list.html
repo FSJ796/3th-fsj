@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load rbac %}
+{% block title %}考勤管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>考勤管理</h1>
+    {% if request.user|has_perm:"attendance_add" %}
+    <div class="actions">
+        <a href="{% url 'attendance_add' %}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-plus"></span> 新增考勤
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        <form class="form-inline" method="get">
+            <div class="form-group">
+                <input type="date" name="date" value="{{ day }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <select name="status" class="form-control">
+                    <option value="">全部状态</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="text" name="q" value="{{ keyword }}" class="form-control" placeholder="员工姓名">
+            </div>
+            <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> 查询</button>
+            {% if day or status or keyword %}<a href="{% url 'attendance_list' %}" class="btn btn-link">清空筛选</a>{% endif %}
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th width="56">ID</th>
+                <th>员工</th>
+                <th>部门</th>
+                <th width="130">考勤日期</th>
+                <th width="110">上班时间</th>
+                <th width="110">下班时间</th>
+                <th width="100">考勤状态</th>
+                <th width="160">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for record in page %}
+            <tr>
+                <td>{{ record.id }}</td>
+                <td><strong>{{ record.employee.name }}</strong></td>
+                <td>{{ record.employee.depart.name }}</td>
+                <td>{{ record.date|date:"Y-m-d" }}</td>
+                <td>{{ record.check_in|time:"H:i"|default:"—" }}</td>
+                <td>{{ record.check_out|time:"H:i"|default:"—" }}</td>
+                <td><span class="label label-{{ record.status_color }}">{{ record.status }}</span></td>
+                <td>
+                    {% if request.user|has_perm:"attendance_edit" %}
+                    <a href="{% url 'attendance_edit' record.pk %}" class="btn btn-xs btn-default">
+                        <span class="glyphicon glyphicon-pencil"></span> 编辑
+                    </a>
+                    {% endif %}
+                    {% if request.user|has_perm:"attendance_delete" %}
+                    <form method="post" action="{% url 'attendance_delete' record.pk %}" class="inline-form"
+                          onsubmit="return confirm('确定删除该考勤记录吗？');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger">
+                            <span class="glyphicon glyphicon-trash"></span> 删除
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted empty-hint">暂无考勤数据</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel-footer">
+        {% include 'partials/pagination.html' with page=page %}
+    </div>
+</div>
+{% endblock %}

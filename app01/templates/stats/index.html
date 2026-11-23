@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}数据统计{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>数据统计可视化</h1>
+    <div class="actions text-muted small">数据由后端 ORM 聚合，前端通过 AJAX + ECharts 渲染</div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="panel panel-default">
+            <div class="panel-heading">部门人数分布</div>
+            <div class="panel-body">
+                <div id="deptChart" class="chart-box"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="panel panel-default">
+            <div class="panel-heading">各月薪资趋势</div>
+            <div class="panel-body">
+                <div id="salaryChart" class="chart-box"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/echarts/echarts.min.js' %}"></script>
+<script>
+    $(function () {
+        var deptChart = echarts.init(document.getElementById('deptChart'));
+        var salaryChart = echarts.init(document.getElementById('salaryChart'));
+
+        function renderEmpty(chart, message) {
+            chart.setOption({
+                title: {
+                    text: message,
+                    left: 'center',
+                    top: 'middle',
+                    textStyle: {color: '#9aa5b1', fontSize: 14, fontWeight: 'normal'}
+                }
+            });
+        }
+
+        deptChart.showLoading({text: '加载中...'});
+        $.getJSON('{% url "stats_department" %}')
+            .done(function (data) {
+                deptChart.hideLoading();
+                if (!data.names.length) {
+                    renderEmpty(deptChart, '暂无部门数据');
+                    return;
+                }
+                deptChart.setOption({
+                    tooltip: {trigger: 'axis', axisPointer: {type: 'shadow'}},
+                    grid: {left: 50, right: 20, top: 30, bottom: 40},
+                    xAxis: {
+                        type: 'category',
+                        data: data.names,
+                        axisLine: {lineStyle: {color: '#cbd5e1'}},
+                        axisLabel: {color: '#5b6472'}
+                    },
+                    yAxis: {
+                        type: 'value',
+                        minInterval: 1,
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        splitLine: {lineStyle: {color: '#edf1f7'}}
+                    },
+                    series: [{
+                        name: '员工人数',
+                        type: 'bar',
+                        data: data.values,
+                        barWidth: '45%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: '#5b9bd5'},
+                                {offset: 1, color: '#337ab7'}
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        label: {show: true, position: 'top', color: '#337ab7', fontWeight: 'bold'}
+                    }]
+                });
+            })
+            .fail(function () {
+                deptChart.hideLoading();
+                renderEmpty(deptChart, '部门数据加载失败');
+            });
+
+        salaryChart.showLoading({text: '加载中...'});
+        $.getJSON('{% url "stats_salary" %}')
+            .done(function (data) {
+                salaryChart.hideLoading();
+                if (!data.months.length) {
+                    renderEmpty(salaryChart, '暂无薪资数据');
+                    return;
+                }
+                salaryChart.setOption({
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function (params) {
+                            var item = params[0];
+                            return item.axisValue + '<br/>实发工资总额：￥' + Number(item.value).toFixed(2);
+                        }
+                    },
+                    grid: {left: 70, right: 30, top: 30, bottom: 40},
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: data.months,
+                        axisLine: {lineStyle: {color: '#cbd5e1'}},
+                        axisLabel: {color: '#5b6472'}
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLine: {show: false},
+                        axisTick: {show: false},
+                        splitLine: {lineStyle: {color: '#edf1f7'}},
+                        axisLabel: {color: '#5b6472', formatter: '￥{value}'}
+                    },
+                    series: [{
+                        name: '实发工资总额',
+                        type: 'line',
+                        smooth: true,
+                        symbolSize: 9,
+                        data: data.totals,
+                        lineStyle: {width: 3, color: '#5cb85c'},
+                        itemStyle: {color: '#5cb85c'},
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                {offset: 0, color: 'rgba(92, 184, 92, 0.35)'},
+                                {offset: 1, color: 'rgba(92, 184, 92, 0.02)'}
+                            ])
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#5cb85c',
+                            formatter: function (params) {
+                                return '￥' + Number(params.value).toFixed(0);
+                            }
+                        }
+                    }]
+                });
+            })
+            .fail(function () {
+                salaryChart.hideLoading();
+                renderEmpty(salaryChart, '薪资数据加载失败');
+            });
+
+        $(window).on('resize', function () {
+            deptChart.resize();
+            salaryChart.resize();
+        });
+    });
+</script>
+{% endblock %}

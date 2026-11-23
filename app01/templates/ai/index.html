@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}AI 智能助手{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>AI 智能助手 <small>招聘 JD 生成 · 制度知识库问答 · 数据智能点评</small></h1>
+</div>
+
+{% if not ai_configured %}
+<div class="alert alert-warning">
+    <strong>尚未配置大模型 API Key。</strong>请按方式 A 在启动服务的 PowerShell 窗口中执行以下命令后重启 <code>runserver</code>：
+    <pre style="margin-top:8px">$env:AI_API_KEY   = "你的_Key"
+$env:AI_BASE_URL  = "https://api.siliconflow.cn/v1"
+$env:AI_MODEL     = "Qwen/Qwen2.5-7B-Instruct"</pre>
+    未配置时各功能会返回友好提示，不会导致页面报错。
+</div>
+{% endif %}
+
+<ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#tab-jd" role="tab" data-toggle="tab">招聘 JD 生成</a></li>
+    <li role="presentation"><a href="#tab-qa" role="tab" data-toggle="tab">制度知识库问答</a></li>
+    <li role="presentation"><a href="#tab-comment" role="tab" data-toggle="tab">数据智能点评</a></li>
+</ul>
+
+<div class="tab-content" style="padding-top: 20px">
+    <!-- T2：智能生成招聘 JD -->
+    <div role="tabpanel" class="tab-pane active" id="tab-jd">
+        <div class="panel panel-default">
+            <div class="panel-heading">输入岗位名称，AI 自动生成结构化招聘 JD（岗位职责 / 任职要求 / 薪资范围）</div>
+            <div class="panel-body">
+                <div class="form-inline">
+                    <input type="text" id="jdTitle" class="form-control" style="width: 320px" maxlength="50"
+                           placeholder="例如：Python 后端工程师">
+                    <button type="button" class="btn btn-primary" id="btnJd">
+                        <span class="glyphicon glyphicon-magic"></span> 生成 JD
+                    </button>
+                </div>
+                <pre id="jdResult" class="ai-result" style="display:none"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- T3：制度知识库问答（SQL 关键词检索 + 提示词注入） -->
+    <div role="tabpanel" class="tab-pane" id="tab-qa">
+        <div class="panel panel-default">
+            <div class="panel-heading">基于企业制度知识库回答，资料中没有的内容将回答“不知道”</div>
+            <div class="panel-body">
+                <div class="form-inline">
+                    <input type="text" id="qaQuestion" class="form-control" style="width: 420px" maxlength="200"
+                           placeholder="例如：迟到怎么处理？请假怎么申请？">
+                    <button type="button" class="btn btn-primary" id="btnQa">
+                        <span class="glyphicon glyphicon-comment"></span> 提问
+                    </button>
+                </div>
+                <div style="margin-top:12px">
+                    <span class="text-muted">试试：</span>
+                    <button type="button" class="btn btn-default btn-xs qa-sample">迟到算缺勤吗？</button>
+                    <button type="button" class="btn btn-default btn-xs qa-sample">请假怎么申请？</button>
+                    <button type="button" class="btn btn-default btn-xs qa-sample">报销需要什么材料？</button>
+                    <button type="button" class="btn btn-default btn-xs qa-sample">公司食堂在哪？</button>
+                </div>
+                <pre id="qaResult" class="ai-result" style="display:none"></pre>
+                <div id="qaSources" class="text-muted" style="margin-top:6px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- T4：数据智能点评（读取考勤/薪资数据注入提示词） -->
+    <div role="tabpanel" class="tab-pane" id="tab-comment">
+        <div class="panel panel-default">
+            <div class="panel-heading">选择员工与月份，AI 结合当月考勤和薪资数据给出一句点评</div>
+            <div class="panel-body">
+                <div class="form-inline">
+                    <select id="commentEmployee" class="form-control" style="width: 200px">
+                        <option value="">请选择员工</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.name }}">{{ emp.name }}（{{ emp.depart.name }}）</option>
+                        {% endfor %}
+                    </select>
+                    <select id="commentMonth" class="form-control" style="width: 150px">
+                        {% for m in months %}
+                        <option value="{{ m }}">{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-primary" id="btnComment">
+                        <span class="glyphicon glyphicon-edit"></span> 生成点评
+                    </button>
+                </div>
+                <div id="commentData" class="text-muted" style="margin-top:12px"></div>
+                <pre id="commentResult" class="ai-result" style="display:none"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ai-result {
+        margin-top: 16px;
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px solid #e3e8ef;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 14px;
+        line-height: 1.8;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(function () {
+        // 通用：按钮进入加载态，防止重复点击；done 后恢复
+        function setLoading($btn, loading) {
+            $btn.prop('disabled', loading);
+            $btn.data('raw', $btn.data('raw') || $btn.html());
+            $btn.html(loading ? 'AI 生成中，请稍候…' : $btn.data('raw'));
+        }
+
+        // T2：招聘 JD 生成
+        $('#btnJd').click(function () {
+            var $btn = $(this);
+            setLoading($btn, true);
+            $.ajax({
+                url: '{% url "ai_jd" %}', type: 'post', dataType: 'json',
+                data: {title: $('#jdTitle').val()},
+                success: function (res) {
+                    $('#jdResult').show().text(res.status ? res.data : res.error);
+                },
+                error: function () { $('#jdResult').show().text('网络异常，请稍后重试'); },
+                complete: function () { setLoading($btn, false); }
+            });
+        });
+
+        // T3：制度知识库问答
+        function askQuestion() {
+            var $btn = $('#btnQa');
+            setLoading($btn, true);
+            $.ajax({
+                url: '{% url "ai_qa" %}', type: 'post', dataType: 'json',
+                data: {question: $('#qaQuestion').val()},
+                success: function (res) {
+                    $('#qaResult').show().text(res.status ? res.data : res.error);
+                    $('#qaSources').text(res.status && res.sources && res.sources.length
+                        ? '参考资料：' + res.sources.join('、') : '');
+                },
+                error: function () { $('#qaResult').show().text('网络异常，请稍后重试'); },
+                complete: function () { setLoading($btn, false); }
+            });
+        }
+        $('#btnQa').click(askQuestion);
+        $('#qaQuestion').on('keydown', function (e) { if (e.keyCode === 13) askQuestion(); });
+        $('.qa-sample').click(function () { $('#qaQuestion').val($(this).text()); askQuestion(); });
+
+        // T4：数据智能点评
+        $('#btnComment').click(function () {
+            var $btn = $(this);
+            setLoading($btn, true);
+            $.ajax({
+                url: '{% url "ai_comment" %}', type: 'post', dataType: 'json',
+                data: {employee: $('#commentEmployee').val(), month: $('#commentMonth').val()},
+                success: function (res) {
+                    $('#commentResult').show().text(res.status ? res.data : res.error);
+                    $('#commentData').text(res.status && res.data_text ? '注入数据：' + res.data_text : '');
+                },
+                error: function () { $('#commentResult').show().text('网络异常，请稍后重试'); },
+                complete: function () { setLoading($btn, false); }
+            });
+        });
+    });
+</script>
+{% endblock %}

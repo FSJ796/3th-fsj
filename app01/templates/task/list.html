@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load rbac %}
+{% block title %}任务管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>任务管理 <small class="text-muted">AJAX 异步提交</small></h1>
+</div>
+
+{% if request.user|has_perm:"task_add" %}
+<div class="panel panel-default">
+    <div class="panel-heading">新建任务</div>
+    <div class="panel-body">
+        <div id="taskAlert"></div>
+        <form id="taskForm" class="form-horizontal" novalidate>
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="form-group" data-field="level">
+                        <label class="control-label">级别</label>
+                        {{ form.level }}
+                        <span class="help-block field-error"></span>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="form-group" data-field="leader">
+                        <label class="control-label">负责人<span class="required-mark">*</span></label>
+                        {{ form.leader }}
+                        <span class="help-block field-error"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" data-field="title">
+                <label class="control-label">标题<span class="required-mark">*</span></label>
+                {{ form.title }}
+                <span class="help-block field-error"></span>
+            </div>
+            <div class="form-group" data-field="detail">
+                <label class="control-label">详情<span class="required-mark">*</span></label>
+                {{ form.detail }}
+                <span class="help-block field-error"></span>
+            </div>
+            <button type="submit" class="btn btn-primary" id="taskSubmit">
+                <span class="glyphicon glyphicon-send"></span> 提交任务
+            </button>
+            <span class="text-muted small" style="margin-left:10px;">提交过程不刷新页面，校验错误实时回显</span>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <form class="form-inline pull-right" method="get" style="margin-top:-4px;">
+            <select name="level" class="form-control input-sm" onchange="this.form.submit()">
+                <option value="">全部级别</option>
+                {% for value, label in level_choices %}
+                <option value="{{ value }}" {% if level == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <span class="panel-title">任务列表</span>
+        <div class="clearfix"></div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th width="60">ID</th>
+                <th width="80">级别</th>
+                <th>标题</th>
+                <th>详情</th>
+                <th width="110">负责人</th>
+                <th width="160">创建时间</th>
+            </tr>
+            </thead>
+            <tbody id="taskTableBody">
+            {% for task in page %}
+            <tr>
+                <td>{{ task.id }}</td>
+                <td><span class="label label-{{ task.level_color }}">{{ task.level }}</span></td>
+                <td><strong>{{ task.title }}</strong></td>
+                <td class="task-detail">{{ task.detail }}</td>
+                <td>{{ task.leader.username }}</td>
+                <td>{{ task.create_time|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row"><td colspan="6" class="text-center text-muted empty-hint">暂无任务</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel-footer">
+        {% include 'partials/pagination.html' with page=page %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(function () {
+        var csrfToken = $('input[name=csrfmiddlewaretoken]').val();
+        var levelClass = {'紧急': 'danger', '重要': 'warning', '普通': 'info'};
+
+        function escapeHtml(text) {
+            return $('<div/>').text(text == null ? '' : String(text)).html();
+        }
+
+        function clearErrors() {
+            $('#taskForm .form-group').removeClass('has-error');
+            $('#taskForm .field-error').text('');
+            $('#taskAlert').empty();
+        }
+
+        $('#taskForm').on('submit', function (event) {
+            event.preventDefault();
+            clearErrors();
+            var $btn = $('#taskSubmit').prop('disabled', true);
+            $.ajax({
+                url: '{% url "task_add" %}',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    csrfmiddlewaretoken: csrfToken,
+                    level: $('#id_level').val(),
+                    title: $('#id_title').val(),
+                    detail: $('#id_detail').val(),
+                    leader: $('#id_leader').val()
+                }
+            }).done(function (res) {
+                $('#taskAlert').html('<div class="alert alert-success">' + escapeHtml(res.message) + '</div>');
+                $('#taskForm')[0].reset();
+                $('#taskForm .form-group').removeClass('has-error');
+                var task = res.task;
+                var badge = levelClass[task.level] || 'info';
+                var row = '<tr>' +
+                    '<td>' + task.id + '</td>' +
+                    '<td><span class="label label-' + badge + '">' + escapeHtml(task.level) + '</span></td>' +
+                    '<td><strong>' + escapeHtml(task.title) + '</strong></td>' +
+                    '<td class="task-detail">' + escapeHtml(task.detail) + '</td>' +
+                    '<td>' + escapeHtml(task.leader) + '</td>' +
+                    '<td>' + escapeHtml(task.create_time) + '</td>' +
+                    '</tr>';
+                $('#taskTableBody .empty-row').remove();
+                $('#taskTableBody').prepend(row);
+                $('#id_title').focus();
+            }).fail(function (xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    var errors = xhr.responseJSON.errors;
+                    $.each(errors, function (field, messages) {
+                        if (field === '__all__') {
+                            $('#taskAlert').html('<div class="alert alert-danger">' + escapeHtml(messages.join('；')) + '</div>');
+                            return;
+                        }
+                        var $group = $('#taskForm .form-group[data-field="' + field + '"]');
+                        $group.addClass('has-error');
+                        $group.find('.field-error').text(messages.join('；'));
+                    });
+                } else {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) || '提交失败，请稍后重试';
+                    $('#taskAlert').html('<div class="alert alert-danger">' + escapeHtml(msg) + '</div>');
+                }
+            }).always(function () {
+                $btn.prop('disabled', false);
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 - 企业员工管理系统</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/hrms.css' %}">
+</head>
+<body class="login-body">
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="logo">HR</div>
+            <h1>企业员工管理系统</h1>
+            <p>Human Resource Management System</p>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <div class="form-group {% if form.username.errors %}has-error{% endif %}">
+                <label class="control-label">用户名</label>
+                {{ form.username }}
+                {% for error in form.username.errors %}<span class="help-block">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="form-group {% if form.password.errors %}has-error{% endif %}">
+                <label class="control-label">密码</label>
+                {{ form.password }}
+                {% for error in form.password.errors %}<span class="help-block">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="form-group {% if form.captcha.errors %}has-error{% endif %}">
+                <label class="control-label">验证码</label>
+                <div class="captcha-row">
+                    {{ form.captcha }}
+                    <img id="captchaImg" src="{% url 'captcha' %}" alt="验证码" title="点击刷新验证码">
+                </div>
+                <span class="help-block captcha-tip">点击图片可刷新</span>
+                {% for error in form.captcha.errors %}<span class="help-block">{{ error }}</span>{% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-block login-btn">登 录</button>
+        </form>
+    </div>
+</div>
+<script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+<script>
+    $(function () {
+        $('#captchaImg').on('click', function () {
+            this.src = '{% url "captcha" %}?t=' + new Date().getTime();
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}分配角色{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>分配角色 <small>{{ user_obj.username }}</small></h1>
+    <div class="actions">
+        <a href="{% url 'system_user_list' %}" class="btn btn-default">
+            <span class="glyphicon glyphicon-arrow-left"></span> 返回用户列表
+        </a>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-body">
+        <form method="post">
+            {% csrf_token %}
+            <p class="text-muted">一个用户可以拥有多个角色，最终权限为所有角色权限的并集。</p>
+            {% for role in roles %}
+            <div class="role-option">
+                <label>
+                    <input type="checkbox" name="roles" value="{{ role.pk }}"
+                           {% if role.pk in selected_ids %}checked{% endif %}>
+                    <strong>{{ role.name }}</strong>
+                    <span class="text-muted">（{{ role.desc|default:"无描述" }}，{{ role.permissions.count }} 项权限）</span>
+                </label>
+            </div>
+            {% empty %}
+            <div class="text-muted">暂无角色，请先执行 init_data 初始化命令。</div>
+            {% endfor %}
+            <hr>
+            <button type="submit" class="btn btn-primary">保存角色</button>
+            <a href="{% url 'system_user_list' %}" class="btn btn-default">取消</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
