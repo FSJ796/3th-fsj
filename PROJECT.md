@@ -29,35 +29,38 @@ flowchart LR
         A[浏览器] -->|HTTP| B(Django MTV)
     end
 
-    subgraph Django 中间件链
-        B --> C[SessionMiddleware]
-        C --> D[CsrfViewMiddleware]
-        D --> E[AuthenticationMiddleware]
-        E --> F[AuthMiddleware\napp01.auth]
-        F --> G[PermissionMiddleware\napp01.permission]
+    subgraph Django 中间件链（settings.py 注册 8 个）
+        B --> C[SecurityMiddleware]
+        C --> D[SessionMiddleware]
+        D --> E[CommonMiddleware]
+        E --> F[CsrfViewMiddleware]
+        F --> G[AuthenticationMiddleware]
+        G --> H[MessageMiddleware]
+        H --> I[XFrameOptionsMiddleware]
+        I --> J[AuthMiddleware\napp01.auth]
     end
 
     subgraph MTV 核心
-        G --> H[urls.py\n路由分发]
-        H --> I[views/\n12 个视图模块]
-        I --> J[models.py\n9 个 ORM 模型]
-        I --> K[templates/\n24 个模板]
+        J --> K[urls.py\n路由分发]
+        K --> L[views/\n12 个视图模块]
+        L --> M[models.py\n9 个 ORM 模型]
+        L --> N[templates/\n24 个模板]
     end
 
     subgraph 数据层
-        J --> L[(MySQL 8.x)]
-        J --> M[(SQLite)]
+        M --> O[(MySQL 8.x\nutf8mb4)]
+        M --> P[(SQLite\nDB_ENGINE=sqlite)]
     end
 
     subgraph AI 层
-        I --> N[utils/ai.py]
-        N --> O[SiliconFlow API\nQwen2.5-7B]
-        N --> P[Knowledge\n知识库]
+        L --> Q[utils/ai.py]
+        Q --> R[SiliconFlow API\nQwen/Qwen2.5-7B-Instruct]
+        Q --> S[Knowledge 表\n关键词检索]
     end
 
-    style F fill:#ffcc99
-    style G fill:#ffcc99
-    style O fill:#99ccff
+    style J fill:#ffcc99
+    style R fill:#99ccff
+    style S fill:#ffcc99
 ```
 
 ---
@@ -107,21 +110,22 @@ erDiagram
     Employee {
         int id PK
         varchar name 姓名
-        int age 年龄
-        int gender 性别
+        int age 年龄(正数)
+        varchar gender 性别('男'/'女')
         decimal account 账户余额
+        date create_time 入职时间
         varchar phone UK 手机
-        int depart_id FK 部门
-        int user_id O2O 关联用户
+        int depart_id FK 部门(PROTECT)
+        int user_id O2O 关联账号(SET_NULL)
     }
 
     Attendance {
         int id PK
         int employee_id FK 员工
         date date 日期
-        time check_in 签到
-        time check_out 签退
-        int status 状态
+        time check_in 签到(nullable)
+        time check_out 签退(nullable)
+        varchar status 状态('按时'/'迟到'/'早退'/'缺勤')
     }
 
     Salary {
@@ -131,23 +135,23 @@ erDiagram
         decimal base_salary 基本工资
         decimal bonus 奖金
         decimal deduction 扣款
-        decimal total 实发(自动算)
+        decimal total 实发(editable=False 自动算)
     }
 
     Notice {
         int id PK
         varchar title 标题
         text content 正文
-        int publisher_id FK 发布人
+        int publisher_id FK 发布人(SET_NULL)
         bool is_top 是否置顶
     }
 
     Task {
         int id PK
-        int level 级别 紧急/重要/普通
+        varchar level 级别('紧急'/'重要'/'普通')
         varchar title 标题
         text detail 详情
-        int leader_id FK 负责人
+        int leader_id FK 负责人(CASCADE)
     }
 
     Knowledge {
@@ -181,30 +185,42 @@ flowchart TD
     F -->|返回 403| G["403.html"]
 ```
 
-**核心代码片段（User 模型方法）：**
+**核心代码片段（User 模型方法，`app01/models.py`）：**
 
 ```python
 def permission_codes(self):
-    """返回该用户所有权限 code 集合，QuerySet 先 prefetch_related"""
-    if not hasattr(self, '_permission_codes_cache'):
-        codes = set()
-        for role in self.roles.prefetch_related('permissions'):
-            codes.update(role.permissions.values_list('code', flat=True))
-        self._permission_codes_cache = codes
-    return self._permission_codes_cache
+    """返回当前用户拥有的权限编码集合（超级管理员拥有全部权限）。"""
+    if not hasattr(self, '_perm_cache'):
+        # 超级管理员视为拥有系统全部权限
+        if self.is_superuser:
+            self._perm_cache = set(Permission.objects.values_list('code', flat=True))
+        else:
+            self._perm_cache = set(
+                Permission.objects.filter(roles__users=self)
+                .values_list('code', flat=True)
+            )
+    return self._perm_cache
 
 def has_code(self, code):
-    return code in self.permission_codes()
+    """判断用户是否拥有指定权限编码。"""
+    return self.is_superuser or code in self.permission_codes()
 ```
 
-**中间件拦截顺序（settings.py MIDDLEWARE）：**
+> 缓存属性 `_perm_cache` 挂在实例上，同一请求内多次调用不重复查库。
+> 注意：项目里 `middleware/permission.py` 虽存在但**未注册到 settings.py**，
+> 权限判断实际由视图函数上的装饰器 + 模板标签 `rbac.py` 完成。
+
+**真实中间件链（settings.py MIDDLEWARE 8 个）：**
 
 ```
-1. SessionMiddleware          # 会话
-2. CsrfViewMiddleware         # CSRF
-3. AuthenticationMiddleware   # request.user 注入
-4. AuthMiddleware             # 未登录 → /login/
-5. PermissionMiddleware       # @permission_required → 403
+1. SecurityMiddleware        # 安全头
+2. SessionMiddleware         # 会话
+3. CommonMiddleware          # 通用（URL 规范化）
+4. CsrfViewMiddleware        # CSRF 防护
+5. AuthenticationMiddleware  # request.user 注入
+6. MessageMiddleware         # flash 消息
+7. XFrameOptionsMiddleware   # 点击劫持防护
+8. AuthMiddleware            # 自定义：未登录 → /login/
 ```
 
 ---
@@ -229,51 +245,79 @@ def has_code(self, code):
 
 ```python
 # 认证
-path('', home_views.index)           # 首页
-path('login/', auth_views.login_view)
-path('logout/', auth_views.logout_view)
-path('captcha/', auth_views.captcha_view)   # 验证码图片
+path('', home_views.index, name='index')
+path('login/', auth_views.login_view, name='login')
+path('logout/', auth_views.logout_view, name='logout')
+path('captcha/', auth_views.captcha_view, name='captcha')
 
-# CRUD 四件套（department / employee / attendance / salary）
-path('<module>/', <module>_list)
-path('<module>/add/', <module>_add)
-path('<module>/edit/<int:pk>/', <module>_edit)
-path('<module>/delete/<int:pk>/', <module>_delete)
+# 部门管理 CRUD
+path('department/',        department_views.department_list)
+path('department/add/',    department_views.department_add)
+path('department/edit/<int:pk>/', department_views.department_edit)
+path('department/delete/<int:pk>/', department_views.department_delete)
 
-# 公告
-path('notice/top/<int:pk>/', notice_toggle_top)
+# 员工管理 CRUD
+path('employee/',          employee_views.employee_list)
+path('employee/add/',      employee_views.employee_add)
+path('employee/edit/<int:pk>/', employee_views.employee_edit)
+path('employee/delete/<int:pk>/', employee_views.employee_delete)
 
-# 任务（AJAX）
-path('task/', task_list)
-path('task/add/', task_add)
+# 考勤管理 CRUD
+path('attendance/',        attendance_views.attendance_list)
+path('attendance/add/',    attendance_views.attendance_add)
+path('attendance/edit/<int:pk>/', attendance_views.attendance_edit)
+path('attendance/delete/<int:pk>/', attendance_views.attendance_delete)
+
+# 薪资管理 CRUD
+path('salary/',            salary_views.salary_list)
+path('salary/add/',        salary_views.salary_add)
+path('salary/edit/<int:pk>/', salary_views.salary_edit)
+path('salary/delete/<int:pk>/', salary_views.salary_delete)
+
+# 公告：列表 / 发布 / 置顶切换
+path('notice/',            notice_views.notice_list)
+path('notice/add/',        notice_views.notice_add)
+path('notice/top/<int:pk>/', notice_views.notice_toggle_top)
+
+# 任务（AJAX 异步）
+path('task/',              task_views.task_list)
+path('task/add/',          task_views.task_add)
 
 # 统计（ECharts 数据源）
-path('stats/department-data/', department_chart_data)
-path('stats/salary-data/', salary_trend_data)
+path('stats/',             stats_views.stats_index)
+path('stats/department-data/', stats_views.department_chart_data)
+path('stats/salary-data/',     stats_views.salary_trend_data)
 
 # AI（四个能力点）
-path('ai/jd/', generate_jd)          # 招聘 JD 生成
-path('ai/qa/', knowledge_qa)         # 制度问答
-path('ai/comment/', salary_comment)  # 薪资点评
-path('ai/chat/', assistant_chat)     # 浮窗聊天
+path('ai/',                ai_views.ai_index)
+path('ai/jd/',             ai_views.generate_jd)          # 招聘 JD 生成
+path('ai/qa/',             ai_views.knowledge_qa)           # 制度知识库问答
+path('ai/comment/',        ai_views.salary_comment)        # 薪资点评
+path('ai/chat/',           ai_views.assistant_chat)        # 浮窗聊天
 
 # RBAC 管理
-path('system/user/<int:pk>/roles/', user_roles)
-path('system/role/<int:pk>/permissions/', role_permissions)
+path('system/user/',       system_views.user_list)
+path('system/user/<int:pk>/roles/', system_views.user_roles)
+path('system/role/',       system_views.role_list)
+path('system/role/<int:pk>/permissions/', system_views.role_permissions)
 ```
+
+> 完整路由表 26 条，实际位于 `app01/urls.py`（76 行含注释）。
 
 ---
 
 ## 六、中间件 & 工具类
 
+**中间件 & 工具类：**
+
 | 文件 | 作用 |
 |------|------|
-| `middleware/auth.py` | 拦截未登录用户跳转 `/login/`，白名单：`/login/` `/captcha/` `/static/` `/media/` |
-| `middleware/permission.py` | 匹配视图函数上的 `@permission_required('xxx:yyy')` 装饰器，无权限返回 403 |
-| `templatetags/rbac.py` | 模板里用 `{% if user|has_code:'employee:add' %}` 控制按钮显示 |
+| `middleware/auth.py` | 拦截未登录用户跳转 `/login/`；白名单：`/login/` `/captcha/` `/static/` `/media/` |
+| `middleware/permission.py` | ⚠️ 文件存在但**未注册**到 MIDDLEWARE；项目实际用模板标签 + 视图装饰器做权限判断 |
+| `templatetags/rbac.py` | 模板里 `{% if user|has_code:'employee:add' %}` 控制按钮显隐 |
 | `utils/captcha.py` | PIL 生成 4 位随机字母 + 干扰线，session 存答案 |
-| `utils/pagination.py` | 通用分页组件：页码容错 / 边界钳制 / 保留 `request.GET` 搜索词 |
-| `utils/ai.py` | 封装 OpenAI SDK 调用 SiliconFlow，带重试 + 上下文注入 |
+| `utils/pagination.py` | 通用分页：页码容错 / 边界钳制 / 保留 `request.GET` 搜索词 |
+| `utils/ai.py` | 封装 OpenAI SDK 调 SiliconFlow，30 秒超时，欠费/超时由上层降级 |
 | `utils/prompts.py` | 系统 prompt 模板（JD 生成 / 制度问答 / 薪资点评） |
 | `utils/scope.py` | 数据范围过滤（普通员工只看自己的记录） |
 
@@ -292,7 +336,7 @@ flowchart LR
     G --> H{Knowledge 表\n关键词检索}
     G --> I[SiliconFlow API\nQwen/Qwen2.5-7B-Instruct]
     H --> I
-    I --> J[流式返回 HTML]
+    I --> J[返回 JSON 文本]
 ```
 
 ### 配置（`settings.py` 全部环境变量，避免硬编码）
@@ -305,10 +349,11 @@ AI_MODEL   = os.environ.get('AI_MODEL',   'Qwen/Qwen2.5-7B-Instruct')
 
 ### 知识库问答流程
 
-1. 提取用户问题关键词（分词 + 停用词过滤）
-2. `Knowledge.objects.filter(title__contains=kw | content__contains=kw)` 取 Top N
-3. 把检索到的段落拼进 system prompt 作为上下文
-4. 调用大模型生成答案
+1. 问题去标点后生成 2–4 字 n-gram 关键词，过滤“怎么/什么/如何”等停用词
+2. 先整句 `icontains` 匹配标题与正文；无命中再按关键词 OR 查询，按命中数排序取前 5 条
+3. 把检索到的段落拼进 system prompt 作为上下文，要求“只能根据资料回答”
+4. 调用大模型生成答案；无检索结果时不调用模型，直接回答“不知道”
+5. 模型欠费、超时或网络异常时，降级返回最相关制度原文，避免已知问题也提示失败
 
 ---
 
@@ -337,8 +382,8 @@ python manage.py runserver
 ### 初始化数据
 
 ```powershell
-python manage.py init_data   # 建超级管理员 admin/admin123
-python manage.py demo_data   # 生成 100 条员工 + 考勤 + 薪资模拟数据
+python manage.py init_data   # 建权限、角色与超级管理员 fsj/fsj123
+python manage.py demo_data   # 6 部门 / 15 员工 / 225 条考勤 / 90 条薪资 / 8 条知识库
 ```
 
 ---
@@ -346,11 +391,11 @@ python manage.py demo_data   # 生成 100 条员工 + 考勤 + 薪资模拟数�
 ## 九、依赖清单
 
 ```
-Django>=5.2,<5.3
-PyMySQL>=1.1.1
-Pillow>=10.4.0
-openai>=1.0.0
-pydantic>=2.0.0
+Django==5.2.7
+PyMySQL==1.1.1
+Pillow==10.4.0
+openai>=1.40.0
+cryptography>=42.0.0
 ```
 
 ---
@@ -369,17 +414,17 @@ pydantic>=2.0.0
 ```
 qiyeguanlixitong/
 ├── app01/
-│   ├── middleware/          # AuthMiddleware + PermissionMiddleware
-│   ├── management/commands/ # init_data / demo_data
+│   ├── middleware/          # auth.py(已注册) + permission.py(未注册，备用)
+│   ├── management/commands/ # init_data 建超级管理员 / demo_data 造模拟数据
 │   ├── migrations/          # 0001_initial / 0002_knowledge
-│   ├── static/              # Bootstrap / jQuery / ECharts
-│   ├── templates/           # 24 个 HTML 模板
-│   ├── templatetags/        # rbac.py 自定义权限模板标签
+│   ├── static/              # Bootstrap 3 / jQuery / ECharts
+│   ├── templates/           # 24 个 HTML 模板 + partials 子组件
+│   ├── templatetags/        # rbac.py 权限判断模板标签
 │   ├── utils/               # ai / captcha / pagination / prompts / scope
-│   ├── views/               # 12 个视图模块（按业务拆分）
+│   ├── views/               # 12 个视图模块（auth/home/dept/emp/attend/salary/notice/task/stats/system/ai）
 │   ├── models.py            # 9 个 ORM 模型
-│   ├── forms.py             # ModelForm
-│   └── urls.py              # 76 行路由表
+│   ├── forms.py             # ModelForm（表单生成）
+│   └── urls.py              # 26 条路由，76 行含注释
 ├── hrms/                    # Django project config
 │   ├── settings.py          # 双 DB 引擎 + AI 环境变量
 │   └── urls.py
